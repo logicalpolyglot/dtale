@@ -761,8 +761,8 @@ def test_get_data(unittest, test_data):
                 columns=[
                     dict(dtype='int64', name='dtale_index', visible=True),
                     dict(dtype='datetime64[ns]', name='date', index=0, visible=True),
-                    dict(dtype='int64', name='security_id', index=1, visible=True),
-                    dict(dtype='int64', name='foo', index=2, visible=True),
+                    dict(dtype='int64', name='security_id', max=49, min=0, index=1, visible=True),
+                    dict(dtype='int64', name='foo', min=1, max=1, index=2, visible=True),
                     dict(dtype='float64', name='bar', min=1.5, max=1.5, index=3, visible=True),
                     dict(dtype='string', name='baz', index=4, visible=True),
                 ]

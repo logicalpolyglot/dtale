@@ -66,6 +66,8 @@ def chart_url_params(search):
         if gp in params:
             params[gp] = json.loads(params[gp])
     params['cpg'] = 'true' == params.get('cpg')
+    if params.get('chart_type') in ANIMATION_CHARTS:
+        params['animate'] = 'true' == params.get('animate')
     if 'window' in params:
         params['window'] = int(params['window'])
     if 'group_filter' in params:
@@ -96,7 +98,9 @@ def chart_url_querystring(params, data=None, group_filter=None):
 
     final_params = {k: params[k] for k in base_props if params.get(k) is not None}
     final_params['cpg'] = 'true' if params.get('cpg') is True else 'false'
-    if (chart_type in ANIMATION_CHARTS or chart_type in ANIMATE_BY_CHARTS) and params.get('animate_by') is not None:
+    if chart_type in ANIMATION_CHARTS:
+        final_params['animate'] = 'true' if params.get('animate') is True else 'false'
+    if chart_type in ANIMATE_BY_CHARTS and params.get('animate_by') is not None:
         final_params['animate_by'] = params.get('animate_by')
     for gp in ['y', 'group', 'map_group', 'group_val']:
         list_param = [val for val in params.get(gp) or [] if val is not None]
@@ -460,12 +464,12 @@ def scatter_builder(data, x, y, axes_builder, wrapper, group=None, z=None, agg=N
                 dict_merge(build_title(x, y_val, group, z=z, agg=agg), layout(axes_builder([y_val])[0]))
             )
         }
-        if animate_by == 'chart_values':
-            def build_frame(i):
-                for series_key, series in data['data'].items():
+        if animate_by is not None:
+            def build_frame(frame):
+                for series_key, series in frame.items():
                     if y_val in series and (group is None or group == series_key):
                         yield scatter_func(**dict(
-                            x=series['x'][:i], y=series[y_val][:i], mode='markers', opacity=0.7,
+                            x=series['x'], y=series[y_val], mode='markers', opacity=0.7,
                             name=series_key, marker=marker(series)
                         ))
 
@@ -587,11 +591,10 @@ def update_cfg_w_frames(cfg, frames, slider_steps):
 
 
 def build_frames(data, frame_builder):
-    x_data = next(iter(data['data'].values()), {}).get('x', [])
     frames, slider_steps = [], []
-    for i, x in enumerate(x_data, 1):
-        frames.append(dict(data=list(frame_builder(i)), name=x))
-        slider_steps.append(x)
+    for frame in data.get('frames', []):
+        frames.append(dict(data=list(frame_builder(frame['data'])), name=frame['name']))
+        slider_steps.append(frame['name'])
     return frames, slider_steps
 
 
@@ -680,13 +683,13 @@ def bar_builder(data, x, y, axes_builder, wrapper, cpg=False, barmode='group', b
             dict_merge(build_title(x, y, agg=kwargs.get('agg')), axes, dict(barmode=barmode or 'group'))
         )
     }
-    if kwargs.get('animate_by') == 'chart_values':
+    if kwargs.get('animate_by'):
 
-        def build_frame(i):
-            for series_key, series in data['data'].items():
+        def build_frame(frame):
+            for series_key, series in frame.items():
                 for j, y2 in enumerate(y, 1):
                     yield dict_merge(
-                        {'x': series['x'][:i], 'y': series[y2][:i], 'type': 'bar'},
+                        {'x': series['x'], 'y': series[y2], 'type': 'bar'},
                         name_builder(y2, series_key),
                         {} if j == 1 or not allow_multiaxis else {'yaxis': 'y{}'.format(j)},
                         hover_text.get(series_key) or {}
@@ -765,7 +768,7 @@ def line_builder(data, x, y, axes_builder, wrapper, cpg=False, **inputs):
     ])
 
     figure_cfg = {'data': data_cfgs, 'layout': build_layout(dict_merge(build_title(x, y, agg=inputs.get('agg')), axes))}
-    if inputs.get('animate_by') == 'chart_values':
+    if inputs.get('animate') is True:
 
         def build_frame(i):
             for series_key, series in data['data'].items():
@@ -777,7 +780,13 @@ def line_builder(data, x, y, axes_builder, wrapper, cpg=False, **inputs):
                         {} if j == 1 or not multi_yaxis else {'yaxis': 'y{}'.format(j)}
                     ))
 
-        update_cfg_w_frames(figure_cfg, *build_frames(data, build_frame))
+        x_data = next(iter(data['data'].values()), {}).get('x', [])
+        frames, slider_steps = [], []
+        for i, x in enumerate(x_data, 1):
+            frames.append(dict(data=list(build_frame(i)), name=x))
+            slider_steps.append(x)
+
+        update_cfg_w_frames(figure_cfg, frames, slider_steps)
 
     return wrapper(graph_wrapper(id='line-graph', figure=figure_cfg))
 
@@ -958,6 +967,19 @@ def heatmap_builder(data_id, export=False, **inputs):
         return build_error(e, traceback.format_exc()), code
 
 
+def build_map_frames(data, animate_by, frame_builder):
+    formatter = find_dtype_formatter(get_dtypes(data)[animate_by])
+    frames, slider_steps = [], []
+    for g_name, g in data.groupby(animate_by):
+        g_name = formatter(g_name)
+        frames.append(dict(
+            data=[frame_builder(g)],
+            name=g_name
+        ))
+        slider_steps.append(g_name)
+    return frames, slider_steps
+
+
 def map_builder(data_id, export=False, **inputs):
     code = None
     try:
@@ -1005,20 +1027,14 @@ def map_builder(data_id, export=False, **inputs):
                 )
             figure_cfg = dict(data=[go.Scattergeo(**chart_kwargs)], layout=layout)
             if animate_by is not None:
-                def build_frames():
-                    formatter = find_dtype_formatter(get_dtypes(data)[animate_by])
-                    frames, slider_steps = [], []
-                    for g_name, g in data.groupby(animate_by):
-                        g_name = formatter(g_name)
-                        frame_kwargs = dict(lon=g[lon], lat=g[lat], mode='markers')
-                        if map_val is not None:
-                            frame_kwargs['text'] = g[map_val]
-                            frame_kwargs['marker'] = dict(color=g[map_val])
-                        frames.append(dict(data=[frame_kwargs], name=g_name))
-                        slider_steps.append(g_name)
-                    return frames, slider_steps
+                def build_frame(df):
+                    frame = dict(lon=df[lon], lat=df[lat], mode='markers')
+                    if map_val is not None:
+                        frame['text'] = df[map_val]
+                        frame['marker'] = dict(color=df[map_val])
+                    return frame
 
-                update_cfg_w_frames(figure_cfg, *build_frames())
+                update_cfg_w_frames(figure_cfg, *build_map_frames(data, animate_by, build_frame))
             chart = graph_wrapper(
                 id='scattergeo-graph',
                 style={'margin-right': 'auto', 'margin-left': 'auto', 'height': '95%'},
@@ -1041,21 +1057,10 @@ def map_builder(data_id, export=False, **inputs):
                 layout=layout
             )
             if animate_by is not None:
-                def build_frames():
-                    formatter = find_dtype_formatter(get_dtypes(data)[animate_by])
-                    frames, slider_steps = [], []
-                    for g_name, g in data.groupby(animate_by):
-                        g_name = formatter(g_name)
-                        frames.append(dict(
-                            data=[dict(
-                                locations=g[loc], locationmode=loc_mode, z=g[map_val], text=g[loc]
-                            )],
-                            name=g_name
-                        ))
-                        slider_steps.append(g_name)
-                    return frames, slider_steps
+                def build_frame(df):
+                    return dict(locations=df[loc], locationmode=loc_mode, z=df[map_val], text=df[loc])
 
-                update_cfg_w_frames(figure_cfg, *build_frames())
+                update_cfg_w_frames(figure_cfg, *build_map_frames(data, animate_by, build_frame))
 
             chart = graph_wrapper(
                 id='choropleth-graph',
@@ -1071,7 +1076,7 @@ def map_builder(data_id, export=False, **inputs):
 
 
 def build_figure_data(data_id, chart_type=None, query=None, x=None, y=None, z=None, group=None, group_val=None,
-                      agg=None, window=None, rolling_comp=None, return_raw=False, **kwargs):
+                      agg=None, window=None, rolling_comp=None, animate_by=None, **kwargs):
     """
     Builds chart figure data for loading into dash:`dash_core_components.Graph <dash-core-components/graph>` components
 
@@ -1101,8 +1106,7 @@ def build_figure_data(data_id, chart_type=None, query=None, x=None, y=None, z=No
     :return: dictionary of series data, min/max ranges of columns used in chart
     :rtype: dict
     """
-    if not valid_chart(**dict(x=x, y=y, z=z, chart_type=chart_type, agg=agg, window=window,
-                              rolling_comp=rolling_comp)):
+    if not valid_chart(**dict(x=x, y=y, z=z, chart_type=chart_type, agg=agg, window=window, rolling_comp=rolling_comp)):
         return None, None
 
     data = run_query(
@@ -1210,11 +1214,12 @@ def build_chart(data_id=None, **inputs):
     """
     code = None
     try:
-        if inputs.get('chart_type') == 'heatmap':
+        chart_type = inputs.get('chart_type')
+        if chart_type == 'heatmap':
             chart, code = heatmap_builder(data_id, **inputs)
             return chart, None, code
 
-        if inputs.get('chart_type') == 'maps':
+        if chart_type == 'maps':
             chart, code = map_builder(data_id, **inputs)
             return chart, None, code
 
@@ -1229,9 +1234,7 @@ def build_chart(data_id=None, **inputs):
         range_data = dict(min=data['min'], max=data['max'])
         axis_inputs = inputs.get('yaxis') or {}
         chart_builder = chart_wrapper(data_id, data, inputs)
-        chart_type, x, y, z, agg, group, animate_by = (
-            inputs.get(p) for p in ['chart_type', 'x', 'y', 'z', 'agg', 'group', 'animate_by']
-        )
+        x, y, z, agg, group, animate_by = (inputs.get(p) for p in ['x', 'y', 'z', 'agg', 'group', 'animate_by'])
         z = z if chart_type in ZAXIS_CHARTS else None
         chart_inputs = {k: v for k, v in inputs.items() if k not in ['chart_type', 'x', 'y', 'z', 'group']}
 
