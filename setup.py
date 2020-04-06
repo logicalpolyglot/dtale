@@ -107,6 +107,7 @@ setup(
                             "static/dash/*",
                             "static/css/*",
                             "static/fonts/*",
+                            "static/images/*",
                             "static/images/**/*",
                             "static/maps/*",
                             "templates/**/*",

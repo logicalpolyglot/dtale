@@ -2,7 +2,8 @@ import pandas as pd
 
 from dtale.utils import (ChartBuildingError, classify_type,
                          find_dtype_formatter, flatten_lists, get_dtypes,
-                         grid_columns, grid_formatter, json_int, make_list)
+                         grid_columns, grid_formatter, json_int, make_list,
+                         run_query)
 
 YAXIS_CHARTS = ['line', 'bar', 'scatter']
 ZAXIS_CHARTS = ['heatmap', '3d_scatter', 'surface']
@@ -187,7 +188,7 @@ def retrieve_chart_data(df, *args, **kwargs):
     all_code = ["chart_data = pd.concat(["] + all_code + ["], axis=1)"]
     if len(make_list(kwargs.get('group_val'))):
         filters = build_group_inputs_filter(all_data, kwargs['group_val'])
-        all_data = all_data.query(filters)
+        all_data = run_query(all_data, filters)
         all_code.append('chart_data = chart_data.query({})'.format(filters))
     return all_data, all_code
 

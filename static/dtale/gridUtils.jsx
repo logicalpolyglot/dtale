@@ -173,6 +173,13 @@ function buildGridStyles(headerHeight = HEADER_HEIGHT) {
 
 const heatMap = chroma.scale(["red", "yellow", "green"]).domain([0, 0.5, 1]);
 
+function getTotalRange(columns) {
+  const activeCols = getActiveCols({ columns });
+  const totalMin = _.min(_.map(activeCols, "min"));
+  const totalMax = _.max(_.map(activeCols, "max"));
+  return { min: totalMin, max: totalMax };
+}
+
 function heatMapBackground({ raw, view }, { min, max }) {
   if (view === "") {
     return {};
@@ -249,7 +256,7 @@ function buildState(props) {
     menuOpen: false,
     formattingOpen: false,
     triggerResize: false,
-    heatMapMode: false,
+    heatMapMode: null,
     dtypeHighlighting: false,
   };
 }
@@ -283,4 +290,5 @@ export {
   buildState,
   noHidden,
   hasNoInfo,
+  getTotalRange,
 };

@@ -1571,7 +1571,9 @@ def test_main():
 @pytest.mark.unit
 def test_200():
     paths = ['/dtale/main/{port}', '/dtale/iframe/{port}', '/dtale/popup/test/{port}', 'site-map', 'version-info',
-             'health', '/charts/{port}', '/charts/popup/{port}', '/dtale/code-popup', '/missing-js']
+             'health', '/charts/{port}', '/charts/popup/{port}', '/dtale/code-popup', '/missing-js',
+             'images/fire.jpg', 'images/projections/miller.png', 'images/map_type/choropleth.png',
+             'maps/usa_110m.json']
     with app.test_client() as c:
         with ExitStack() as stack:
             stack.enter_context(mock.patch('dtale.global_state.DATA', {c.port: None}))

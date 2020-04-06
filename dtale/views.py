@@ -408,7 +408,7 @@ def dtype_formatter(data, dtypes, data_ranges, prev_dtypes=None):
         if prev_dtypes and col in prev_dtypes:
             visible = prev_dtypes[col].get('visible', True)
         dtype_data = dict(name=col, dtype=dtype, index=col_index, visible=visible)
-        if classify_type(dtype) == 'F' and not data[col].isnull().all() and col in data_ranges:  # floats
+        if classify_type(dtype) in ['F', 'I'] and not data[col].isnull().all() and col in data_ranges:  # floats/ints
             col_ranges = data_ranges[col]
             if not any((np.isnan(v) or np.isinf(v) for v in col_ranges.values())):
                 dtype_data = dict_merge(col_ranges, dtype_data)

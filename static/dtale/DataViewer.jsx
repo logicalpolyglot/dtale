@@ -19,6 +19,7 @@ import { Header } from "./Header";
 import { MeasureText } from "./MeasureText";
 import * as gu from "./gridUtils";
 import { ColumnMenu } from "./iframe/ColumnMenu";
+import {getActiveCols} from "./gridUtils";
 
 require("./DataViewer.css");
 const URL_PROPS = ["ids", "sortInfo"];
@@ -36,6 +37,9 @@ class ReactDataViewer extends React.Component {
   propagateState(state, callback = _.noop) {
     if (_.has(state, "columns") && !_.get(state, "formattingUpdate", false)) {
       state.columns = _.map(state.columns, c => _.assignIn(c, { width: gu.calcColWidth(c, this.state) }));
+      const totalRange = gu.getTotalRange(state.columns);
+      state.min = totalRange.min;
+      state.max = totalRange.max;
     }
     if (_.get(state, "refresh", false)) {
       this.getData(this.state.ids, true);
@@ -127,7 +131,7 @@ class ReactDataViewer extends React.Component {
           });
           return;
         }
-        const newState = {
+        let newState = {
           rowCount: data.total + 1,
           data: _.assignIn(savedData, formattedData),
           error: null,
@@ -148,12 +152,14 @@ class ReactDataViewer extends React.Component {
               c
             )
           );
+          newState = _.assignIn(newState, gu.getTotalRange(newState.columns));
         } else {
           const newCols = _.map(
             _.filter(data.columns, ({ name }) => !_.find(columns, { name })),
             c => _.assignIn({ locked: false, width: gu.calcColWidth(c, newState) }, c)
           );
           newState.columns = _.concat(columns, newCols);
+          newState = _.assignIn(newState, gu.getTotalRange(newState.columns));
         }
         let callback = _.noop;
         if (refresh) {
@@ -190,8 +196,11 @@ class ReactDataViewer extends React.Component {
       const rec = _.get(this.state, ["data", rowIndex - 1, colCfg.name], {});
       value = rec.view;
       valueStyle = _.get(rec, "style", {});
-      if (this.state.heatMapMode) {
+      if (this.state.heatMapMode === "col") {
         valueStyle = _.assignIn(gu.heatMapBackground(rec, colCfg), valueStyle);
+      }
+      if (this.state.heatMapMode === "all" && colCfg.name !== gu.IDX) {
+        valueStyle = _.assignIn(gu.heatMapBackground(rec, this.state), valueStyle);
       }
       if (this.state.dtypeHighlighting) {
         valueStyle = _.assignIn(gu.dtypeHighlighting(colCfg), valueStyle);
