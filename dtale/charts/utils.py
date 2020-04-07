@@ -282,24 +282,24 @@ def build_agg_data(df, x, y, inputs, agg, z=None, animate_by=None):
         return agg_df, code
 
     if z_exists:
-        idx_cols = [x] + make_list(y)
-        if animate_by is not None:
-            idx_cols = [animate_by] + idx_cols
-            full_idx = pd.MultiIndex.from_product([df[c].unique() for c in idx_cols], names=idx_cols)
-            df = df.set_index(idx_cols).reindex(full_idx).fillna(0).reset_index()
+        idx_cols = make_list(animate_by) + [x] + make_list(y)
         groups = df.groupby(idx_cols)
-        return getattr(groups[make_list(z)], agg)().reset_index(), [
+        groups = getattr(groups[make_list(z)], agg)()
+        if animate_by is not None:
+            full_idx = pd.MultiIndex.from_product([df[c].unique() for c in idx_cols], names=idx_cols)
+            groups = groups.reindex(full_idx).fillna(0)
+        return groups.reset_index(), [
             "chart_data = chart_data.groupby(['{cols}'])[['{z}']].{agg}().reset_index()".format(
                 cols="', '".join([x] + make_list(y)), z=z, agg=agg
             )
         ]
-    idx_cols = [x]
-    if animate_by is not None:
-        idx_cols = [animate_by] + idx_cols
-        full_idx = pd.MultiIndex.from_product([df[c].unique() for c in idx_cols], names=idx_cols)
-        df = df.set_index(idx_cols).reindex(full_idx).fillna(0).reset_index()
+    idx_cols = make_list(animate_by) + [x]
     groups = df.groupby(idx_cols)
-    return getattr(groups[y], agg)().reset_index(), [
+    groups = getattr(groups[y], agg)()
+    if animate_by is not None:
+        full_idx = pd.MultiIndex.from_product([df[c].unique() for c in idx_cols], names=idx_cols)
+        groups = groups.reindex(full_idx).fillna(0)
+    return groups.reset_index(), [
         "chart_data = chart_data.groupby('{x}')[['{y}']].{agg}().reset_index()".format(
             x=x, y=make_list(y)[0], agg=agg
         )

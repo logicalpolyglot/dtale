@@ -1027,7 +1027,7 @@ def map_builder(data_id, export=False, **inputs):
         if map_type == 'scattergeo':
             data, code = retrieve_chart_data(raw_data, lat, lon, map_val, animate_by, map_group, group_val=group_val)
             if agg is not None:
-                data, agg_code = build_agg_data(raw_data, lat, lon, {}, agg, z=map_val)
+                data, agg_code = build_agg_data(raw_data, lat, lon, {}, agg, z=map_val, animate_by=animate_by)
                 code += agg_code
 
             geo_layout = {}
@@ -1044,7 +1044,7 @@ def map_builder(data_id, export=False, **inputs):
             if map_val is not None:
                 chart_kwargs['text'] = data[map_val]
                 chart_kwargs['marker'] = dict(
-                    color=data[map_val],
+                    color=data[map_val], cmin=data[map_val].min(), cmax=data[map_val].max(),
                     colorscale=inputs.get('colorscale') or 'Reds',
                     colorbar_title=map_val
                 )
@@ -1067,15 +1067,15 @@ def map_builder(data_id, export=False, **inputs):
         else:
             data, code = retrieve_chart_data(raw_data, loc, map_val, map_group, animate_by, group_val=group_val)
             if agg is not None:
-                data, agg_code = build_agg_data(data, loc, map_val, {}, agg)
+                data, agg_code = build_agg_data(data, loc, map_val, {}, agg, animate_by=animate_by)
                 code += agg_code
             if loc_mode == 'USA-states':
                 layout['geo'] = dict(scope='usa')
-
             figure_cfg = dict(
                 data=[go.Choropleth(
                     locations=data[loc], locationmode=loc_mode, z=data[map_val],
-                    colorscale=inputs.get('colorscale') or 'Reds', colorbar_title=map_val
+                    colorscale=inputs.get('colorscale') or 'Reds', colorbar_title=map_val,
+                    zmin=data[map_val].min(), zmax=data[map_val].max()
                 )],
                 layout=layout
             )
