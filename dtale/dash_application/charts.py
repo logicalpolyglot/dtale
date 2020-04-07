@@ -684,18 +684,41 @@ def bar_builder(data, x, y, axes_builder, wrapper, cpg=False, barmode='group', b
         )
     }
     if kwargs.get('animate_by'):
-
         def build_frame(frame):
-            for series_key, series in frame.items():
-                for j, y2 in enumerate(y, 1):
-                    yield dict_merge(
-                        {'x': series['x'], 'y': series[y2], 'type': 'bar'},
-                        name_builder(y2, series_key),
-                        {} if j == 1 or not allow_multiaxis else {'yaxis': 'y{}'.format(j)},
-                        hover_text.get(series_key) or {}
+            data, layout = [], {}
+            for series_key, series in frame['data'].items():
+                barsort_col = 'x' if barsort == x or barsort not in series else barsort
+                layout = {}
+                if barsort_col != 'x' or kwargs.get('agg') == 'raw':
+                    df = pd.DataFrame(series)
+                    df = df.sort_values(barsort_col)
+                    series = dict_merge(
+                        {c: df[c].values for c in df.columns},
+                        {'x': list(range(len(df['x']))), 'hovertext': df['x'].values, 'hoverinfo': 'y+text'}
                     )
+                    layout['xaxis'] = dict_merge(
+                        axes.get('xaxis', {}),
+                        build_spaced_ticks(df['x'].values, mode='array')
+                    )
+                for i, y2 in enumerate(y, 1):
+                    data.append(dict_merge(
+                        {k: v for k, v in series.items() if k in ['x', 'hovertext', 'hoverinfo']},
+                        {'y': series[y2], 'type': 'bar'},
+                        name_builder(y2, series_key),
+                        {} if i == 1 or not allow_multiaxis else {'yaxis': 'y{}'.format(i)},
+                    ))
+                if barmode == 'group' and allow_multiaxis:
+                    data['data'] = list(build_grouped_bars_with_multi_yaxis(data['data'], y))
+                return dict(data=data, layout=layout, name=frame['name'])
 
-        update_cfg_w_frames(figure_cfg, *build_frames(data, build_frame))
+        def build_bar_frames(data, frame_builder):
+            frames, slider_steps = [], []
+            for frame in data.get('frames', []):
+                frames.append(frame_builder(frame))
+                slider_steps.append(frame['name'])
+            return frames, slider_steps
+
+        update_cfg_w_frames(figure_cfg, *build_bar_frames(data, build_frame))
 
     return wrapper(graph_wrapper(id='bar-graph', figure=figure_cfg))
 
@@ -1120,6 +1143,8 @@ def build_figure_data(data_id, chart_type=None, query=None, x=None, y=None, z=No
     code = build_code_export(data_id, query=query)
     chart_kwargs = dict(group_col=group, group_val=group_val, agg=agg, allow_duplicates=chart_type == 'scatter',
                         rolling_win=window, rolling_comp=rolling_comp)
+    if chart_type in ANIMATE_BY_CHARTS:
+        chart_kwargs['animate_by'] = animate_by
     if chart_type in ZAXIS_CHARTS:
         chart_kwargs['z'] = z
         del chart_kwargs['group_col']

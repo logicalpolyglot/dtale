@@ -1,3 +1,4 @@
+import copy
 import pandas as pd
 
 from dtale.utils import (ChartBuildingError, classify_type,
@@ -237,7 +238,7 @@ def check_exceptions(df, allow_duplicates, unlimited_data=False, data_limit=1500
         raise ChartBuildingError(limit_msg.format(data_limit))
 
 
-def build_agg_data(df, x, y, inputs, agg, z=None):
+def build_agg_data(df, x, y, inputs, agg, z=None, animate_by=None):
     """
     Builds aggregated data when an aggregation (sum, mean, max, min...) is selected from the front-end.
 
@@ -272,9 +273,7 @@ def build_agg_data(df, x, y, inputs, agg, z=None):
         agg_df = pd.DataFrame({c: getattr(agg_df[c], comp)() for c in y})
         agg_df = agg_df.reset_index()
         code = [
-            "chart_data = chart_data.set_index(['{x}']).rolling(window={window})".format(
-                x="', '".join(make_list(x)), window=window
-            ),
+            "chart_data = chart_data.set_index('{x}').rolling(window={window})".format(x=x, window=window),
             "chart_data = pd.DataFrame({'" + ', '.join(
                 ["'{c}': chart_data['{c}'].{comp}()".format(c=c, comp=comp) for c in y]
             ) + '})',
@@ -283,16 +282,26 @@ def build_agg_data(df, x, y, inputs, agg, z=None):
         return agg_df, code
 
     if z_exists:
-        groups = df.groupby(make_list(x) + make_list(y))
+        idx_cols = [x] + make_list(y)
+        if animate_by is not None:
+            idx_cols = [animate_by] + idx_cols
+            full_idx = pd.MultiIndex.from_product([df[c].unique() for c in idx_cols], names=idx_cols)
+            df = df.set_index(idx_cols).reindex(full_idx).fillna(0).reset_index()
+        groups = df.groupby(idx_cols)
         return getattr(groups[make_list(z)], agg)().reset_index(), [
             "chart_data = chart_data.groupby(['{cols}'])[['{z}']].{agg}().reset_index()".format(
-                cols="', '".join(make_list(x) + make_list(y)), z=z, agg=agg
+                cols="', '".join([x] + make_list(y)), z=z, agg=agg
             )
         ]
-    groups = df.groupby(x)
+    idx_cols = [x]
+    if animate_by is not None:
+        idx_cols = [animate_by] + idx_cols
+        full_idx = pd.MultiIndex.from_product([df[c].unique() for c in idx_cols], names=idx_cols)
+        df = df.set_index(idx_cols).reindex(full_idx).fillna(0).reset_index()
+    groups = df.groupby(idx_cols)
     return getattr(groups[y], agg)().reset_index(), [
-        "chart_data = chart_data.groupby(['{x}'])[['{y}']].{agg}().reset_index()".format(
-            x="', '".join(make_list(x)), y=make_list(y)[0], agg=agg
+        "chart_data = chart_data.groupby('{x}')[['{y}']].{agg}().reset_index()".format(
+            x=x, y=make_list(y)[0], agg=agg
         )
     ]
 
@@ -391,8 +400,7 @@ def build_base_chart(raw_data, x, y, group_col=None, group_val=None, agg=None, a
                 ret_data['frames'].append(
                     dict(data=dict(_load_groups(frame)), name=frame_fmt(frame_key, as_string=True))
                 )
-
-            ret_data['data'] = ret_data['frames'][-1]['data']
+            ret_data['data'] = copy.deepcopy(ret_data['frames'][-1]['data'])
         else:
             ret_data['data'] = dict(_load_groups(data))
         return ret_data, code
@@ -404,11 +412,12 @@ def build_base_chart(raw_data, x, y, group_col=None, group_val=None, agg=None, a
     code.append("chart_data = chart_data.sort_values(['{cols}'])".format(cols="', '".join(sort_cols)))
     check_all_nan(data, main_group + y_cols + z_cols)
     y_cols = [str(y_col) for y_col in y_cols]
+    data = data[main_group + y_cols + z_cols]
     main_group[-1] = x_col
     data.columns = main_group + y_cols + z_cols
     code.append("chart_data.columns = ['{cols}']".format(cols="', '".join(main_group + y_cols + z_cols)))
     if agg is not None:
-        data, agg_code = build_agg_data(data, main_group, y_cols, kwargs, agg, z=z_col)
+        data, agg_code = build_agg_data(data, x_col, y_cols, kwargs, agg, z=z_col, animate_by=animate_by)
         code += agg_code
     data = data.dropna()
     if return_raw:
@@ -435,7 +444,7 @@ def build_base_chart(raw_data, x, y, group_col=None, group_val=None, agg=None, a
             ret_data['frames'].append(
                 dict(data={str('all'): data_f.format_lists(frame)}, name=frame_fmt(frame_key, as_string=True))
             )
-        ret_data['data'] = ret_data['frames'][-1]['data']
+        ret_data['data'] = copy.deepcopy(ret_data['frames'][-1]['data'])
     else:
         ret_data['data'] = {str('all'): data_f.format_lists(data)}
     return ret_data, code
