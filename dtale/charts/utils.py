@@ -1,8 +1,9 @@
 import copy
+
 import pandas as pd
 
-from dtale.utils import (ChartBuildingError, classify_type,
-                         find_dtype, find_dtype_formatter, flatten_lists, get_dtypes,
+from dtale.utils import (ChartBuildingError, classify_type, find_dtype,
+                         find_dtype_formatter, flatten_lists, get_dtypes,
                          grid_columns, grid_formatter, json_int, make_list,
                          run_query)
 

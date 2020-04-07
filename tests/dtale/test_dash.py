@@ -926,7 +926,6 @@ def test_chart_building_3D_scatter(unittest, test_data):
             chart_inputs = {'cpg': False, 'barmode': 'group', 'barsort': 'b'}
             params = build_chart_params(pathname, inputs, chart_inputs)
             response = c.post('/charts/_dash-update-component', json=params)
-            print(response.get_json()['response']['chart-content'])
             chart_markup = response.get_json()['response']['chart-content']['children'][0]['props']['children'][1]
             unittest.assertEqual(
                 chart_markup['props']['figure']['layout']['title'],
@@ -1024,11 +1023,12 @@ def test_chart_building_map(unittest, state_data, scattergeo_data):
             )
 
             map_inputs['map_group'] = 'cat'
-            group_val = df['cat'].values[0]
+            group_val = str(df['cat'].values[0])
             inputs['group_val'] = [dict(cat=group_val)]
             params = build_chart_params(pathname, inputs, chart_inputs, map_inputs=map_inputs)
             response = c.post('/charts/_dash-update-component', json=params)
             resp_data = response.get_json()['response']
+            print(resp_data['chart-content']['children'])
             title = resp_data['chart-content']['children']['props']['children'][1]['props']['figure']['layout']['title']
             assert title['text'] == 'Map of val (No Aggregation) (cat == {})'.format(group_val)
 
