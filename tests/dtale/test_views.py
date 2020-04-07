@@ -283,6 +283,28 @@ def test_update_locked(unittest):
 
 
 @pytest.mark.unit
+def test_delete_col(unittest):
+    from dtale.views import build_dtypes_state
+
+    df = pd.DataFrame([dict(a=1, b=2, c=3)])
+    with app.test_client() as c:
+        with ExitStack() as stack:
+            data = {c.port: df}
+            stack.enter_context(mock.patch('dtale.global_state.DATA', data))
+            settings = {c.port: {'locked': ['a']}}
+            stack.enter_context(mock.patch('dtale.global_state.SETTINGS', settings))
+            dtypes = {c.port: build_dtypes_state(df)}
+            stack.enter_context(mock.patch('dtale.global_state.DTYPES', dtypes))
+            c.get('/dtale/delete-col/{}/a'.format(c.port))
+            assert 'a' not in data[c.port].columns
+            assert next((dt for dt in dtypes[c.port] if dt['name'] == 'a'), None) is None
+            assert len(settings[c.port]['locked']) == 0
+
+            resp = c.get('/dtale/delete-col/-1/d'.format(c.port))
+            assert 'error' in json.loads(resp.data)
+
+
+@pytest.mark.unit
 def test_update_visibility(unittest):
     from dtale.views import build_dtypes_state
 

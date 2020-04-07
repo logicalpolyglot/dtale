@@ -19,7 +19,6 @@ import { Header } from "./Header";
 import { MeasureText } from "./MeasureText";
 import * as gu from "./gridUtils";
 import { ColumnMenu } from "./iframe/ColumnMenu";
-import {getActiveCols} from "./gridUtils";
 
 require("./DataViewer.css");
 const URL_PROPS = ["ids", "sortInfo"];

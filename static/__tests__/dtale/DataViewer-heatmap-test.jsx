@@ -6,7 +6,7 @@ import { Provider } from "react-redux";
 import mockPopsicle from "../MockPopsicle";
 import * as t from "../jest-assertions";
 import reduxUtils from "../redux-test-utils";
-import { buildInnerHTML, clickMainMenuButton, withGlobalJquery } from "../test-utils";
+import { buildInnerHTML, findMainMenuButton, withGlobalJquery } from "../test-utils";
 
 const originalOffsetHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetHeight");
 const originalOffsetWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetWidth");
@@ -50,7 +50,11 @@ describe("DataViewer heatmap tests", () => {
 
     setTimeout(() => {
       result.update();
-      clickMainMenuButton(result, "Heat Map");
+      let heatMapBtn = findMainMenuButton(result, "By Col", "div.btn-group");
+      heatMapBtn
+        .find("button")
+        .first()
+        .simulate("click");
       result.update();
       let dv = result.find(ReactDataViewer).instance().state;
       t.ok(
@@ -67,10 +71,27 @@ describe("DataViewer heatmap tests", () => {
           .find(ReactDataViewer)
           .find("div.headerCell")
           .map(hc => hc.text()),
-        ["col2"],
-        "should render float column headers"
+        ["col1", "col2"],
+        "should render int/float column headers"
       );
-      clickMainMenuButton(result, "Heat Map");
+      heatMapBtn = findMainMenuButton(result, "By Col", "div.btn-group");
+      heatMapBtn
+        .find("button")
+        .last()
+        .simulate("click");
+      t.deepEqual(
+        result
+          .find(ReactDataViewer)
+          .find("div.headerCell")
+          .map(hc => hc.text()),
+        ["col1", "col2"],
+        "should render int/float column headers"
+      );
+      heatMapBtn = findMainMenuButton(result, "By Col", "div.btn-group");
+      heatMapBtn
+        .find("button")
+        .last()
+        .simulate("click");
       dv = result.find(ReactDataViewer).instance().state;
       t.ok(_.filter(dv.columns, { visible: true }).length, 5, "should turn all columns back on");
       t.ok(

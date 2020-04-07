@@ -100,14 +100,14 @@ class ReactDataViewerMenu extends React.Component {
             </span>
             <div className="hoverable__content menu-description">{Descriptions.charts}</div>
           </li>
-          <li className="hoverable" style={{color: "inherit"}}>
+          <li className="hoverable" style={{ color: "inherit" }}>
             <span className="toggler-action">
               <i className={`fa fa-${this.props.heatMapMode ? "fire-extinguisher" : "fire-alt"} ml-2 mr-4`} />
             </span>
-            <span className={`font-weight-bold pl-2${!_.isNull(this.props.heatMapMode) ? " flames" : ""}`}>
+            <span className={`font-weight-bold pl-2${_.isNull(this.props.heatMapMode) ? "" : " flames"}`}>
               {"Heat Map"}
             </span>
-            <div className="btn-group compact ml-auto mr-3 font-weight-bold column-sorting" style={{fontSize: "75%"}}>
+            <div className="btn-group compact ml-auto mr-3 font-weight-bold column-sorting" style={{ fontSize: "75%" }}>
               {_.map(
                 [
                   ["By Col", "col"],
@@ -119,7 +119,7 @@ class ReactDataViewerMenu extends React.Component {
                     style={{ color: "#565b68" }}
                     className="btn btn-primary font-weight-bold"
                     onClick={toggleHeatMap(mode)}>
-                    {mode === this.props.heatMapMode && (<span className="flames">{label}</span>)}
+                    {mode === this.props.heatMapMode && <span className="flames">{label}</span>}
                     {mode !== this.props.heatMapMode && label}
                   </button>
                 )
@@ -132,9 +132,7 @@ class ReactDataViewerMenu extends React.Component {
               <button className="btn btn-plain" onClick={toggleDtypeHighlighting}>
                 <div style={{ display: "inherit" }}>
                   <div className={`dtype-highlighting${this.props.dtypeHighlighting ? " spin" : ""}`} />
-                  <span className="font-weight-bold pl-4">
-                    Highlight Dtypes
-                  </span>
+                  <span className="font-weight-bold pl-4">Highlight Dtypes</span>
                 </div>
               </button>
             </span>
@@ -142,7 +140,7 @@ class ReactDataViewerMenu extends React.Component {
           </li>
           <li className="hoverable">
             <span className="toggler-action">
-              <button className="btn btn-plain" onClick={openPopup("instances")}>
+              <button className="btn btn-plain" onClick={openPopup("instances", 450, 750)}>
                 <i className="ico-apps" />
                 <span className="font-weight-bold">
                   {"Instances "}
@@ -163,7 +161,7 @@ class ReactDataViewerMenu extends React.Component {
             </span>
             <div className="hoverable__content menu-description">{Descriptions.code}</div>
           </li>
-          <li className="hoverable" style={{color: "inherit"}}>
+          <li className="hoverable" style={{ color: "inherit" }}>
             <span className="toggler-action">
               <i className="far fa-file" />
             </span>

@@ -22,7 +22,7 @@ const DATA = {
   ],
   columns: [
     { name: "dtale_index", dtype: "int64", visible: true },
-    { name: "col1", dtype: "int64", visible: true },
+    { name: "col1", dtype: "int64", min: 2, max: 5, visible: true },
     { name: "col2", dtype: "float64", min: 2.5, max: 5.5, visible: true },
     { name: "col3", dtype: "object", visible: true },
     { name: "col4", dtype: "datetime64[ns]", visible: true },
@@ -179,7 +179,10 @@ function urlFetcher(url) {
     return chartsData;
   } else if (
     _.find(
-      ["/dtale/update-visibility", "/dtale/update-settings", "/dtale/update-locked", "/dtale/update-column-position"],
+      _.concat(
+        ["/dtale/update-visibility", "/dtale/update-settings", "/dtale/update-locked", "/dtale/update-column-position"],
+        ["/dtale/delete-col"]
+      ),
       prefix => _.startsWith(url, prefix)
     )
   ) {
@@ -235,4 +238,5 @@ function createDtaleStore() {
 export default {
   urlFetcher,
   createDtaleStore,
+  DATA,
 };

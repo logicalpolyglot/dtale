@@ -125,6 +125,11 @@ class ReactColumnMenu extends React.Component {
       };
       serverState.toggleVisibility(dataId, selectedCol, hideCallback);
     };
+    const deleteCol = () =>
+      this.props.propagateState(
+        { columns: _.reject(this.props.columns, { name: selectedCol }) },
+        serverState.deleteColumn(dataId, selectedCol)
+      );
     return (
       <div
         id="column-menu-div"
@@ -196,6 +201,14 @@ class ReactColumnMenu extends React.Component {
               <button className="btn btn-plain" onClick={hideCol}>
                 <i className="ico-visibility-off" />
                 <span className="font-weight-bold">Hide</span>
+              </button>
+            </span>
+          </li>
+          <li>
+            <span className="toggler-action">
+              <button className="btn btn-plain" onClick={deleteCol}>
+                <i className="ico-delete" />
+                <span className="font-weight-bold">Delete</span>
               </button>
             </span>
           </li>

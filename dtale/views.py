@@ -1036,6 +1036,23 @@ def describe(data_id, column):
         return jsonify_error(e)
 
 
+@dtale.route('/delete-col/<data_id>/<column>')
+def delete_col(data_id, column):
+    try:
+        data = global_state.get_data(data_id)
+        data = data[[c for c in data.columns if c != column]]
+        dtypes = global_state.get_dtypes(data_id)
+        dtypes = [dt for dt in dtypes if dt['name'] != column]
+        curr_settings = global_state.get_settings(data_id)
+        curr_settings['locked'] = [c for c in curr_settings.get('locked', []) if c != column]
+        global_state.set_data(data_id, data)
+        global_state.set_dtypes(data_id, dtypes)
+        global_state.set_settings(data_id, curr_settings)
+        return jsonify(success=True)
+    except BaseException as e:
+        return jsonify_error(e)
+
+
 @dtale.route('/column-filter-data/<data_id>/<column>')
 def get_column_filter_data(data_id, column):
     try:

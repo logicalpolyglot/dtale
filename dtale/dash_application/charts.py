@@ -23,7 +23,6 @@ from dtale.charts.utils import (build_group_inputs_filter, check_all_nan,
                                 valid_chart, weekday_tick_handler)
 from dtale.dash_application.layout import (AGGS, ANIMATE_BY_CHARTS,
                                            ANIMATION_CHARTS, build_error,
-                                           test_plotly_version,
                                            update_label_for_freq)
 from dtale.utils import (build_code_export, classify_type, dict_merge,
                          divide_chunks, export_to_csv_buffer,
@@ -1031,8 +1030,6 @@ def map_builder(data_id, export=False, **inputs):
                 code += agg_code
 
             geo_layout = {}
-            if test_plotly_version('4.5.0'):
-                geo_layout['fitbounds'] = 'locations'
             if scope is not None:
                 geo_layout['scope'] = scope
             if proj is not None:

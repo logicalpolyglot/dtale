@@ -205,7 +205,7 @@ class Instances extends React.Component {
             if (rowData.data_id === this.props.dataId) {
               return null;
             }
-            return <i className="ico-remove-circle" onClick={cleanup(rowData)} />;
+            return <i className="ico-delete" onClick={cleanup(rowData)} />;
           }}
           className="cell"
         />
